@@ -2,7 +2,6 @@ import os
 from contextlib import closing
 from pathlib import Path
 
-import numpy as np
 from PIL import Image, ImageOps, ImageFilter, ImageEnhance, UnidentifiedImageError
 import gradio as gr
 
@@ -152,19 +151,18 @@ def img2img(id_task: str, request: gr.Request, mode: int, prompt: str, negative_
     is_batch = mode == 5
 
     if mode == 0:  # img2img
-        image = init_img
+        image = init_img["composite"]
         mask = None
     elif mode == 1:  # img2img sketch
-        image = sketch
+        image = sketch["composite"]
         mask = None
     elif mode == 2:  # inpaint
-        image, mask = init_img_with_mask["image"], init_img_with_mask["mask"]
+        image, mask = init_img_with_mask["background"], init_img_with_mask["layers"][0]
         mask = processing.create_binary_mask(mask)
     elif mode == 3:  # inpaint sketch
-        image = inpaint_color_sketch
-        orig = inpaint_color_sketch_orig or inpaint_color_sketch
-        pred = np.any(np.array(image) != np.array(orig), axis=-1)
-        mask = Image.fromarray(pred.astype(np.uint8) * 255, "L")
+        image = inpaint_color_sketch["composite"]
+        orig = inpaint_color_sketch["background"]
+        mask = inpaint_color_sketch["layers"][0].getchannel("A")
         mask = ImageEnhance.Brightness(mask).enhance(1 - mask_alpha / 100)
         blur = ImageFilter.GaussianBlur(mask_blur)
         image = Image.composite(image.filter(blur), orig, mask.filter(blur))
